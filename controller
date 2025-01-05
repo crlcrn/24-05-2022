@@ -12,29 +12,31 @@ class Controller:
 
 
     def fillDD(self):
-        genre = DAO.getGenre()
 
-        for g in genre:
-            self._view.ddgenere.options.append(ft.dropdown.Option(key=g.GenreId, text=g.Name))
+        generi = self._model.get_generi()
+        for g in generi:
+            self._view.ddgenere.options.append(ft.dropdown.Option(key = g.GenreId, text=g.Name))
 
-        self._view.update_page()
+
 
 
     def handle_graph(self, e):
+
         self._view.txt_result.controls.clear()
         g = self._view.ddgenere.value
-
-        if g is None:
-            self._view.create_alert('Selezionare il genere musicale')
+        if g is None or g == '':
+            self._view.create_alert('Selezionare un genere musicale')
             return
 
-        self._model.buildGraph(g)
-
+        self._model.build_graph(g)
         nNodes, nEdges = self._model.getCaratteristiche()
+        self._view.txt_result.controls.append(ft.Text('Grafo creato!'))
         self._view.txt_result.controls.append(ft.Text(f"Il grafo ha {nNodes} nodi e {nEdges} vertici"))
         self._view.update_page()
 
+
     def handle_delta_max(self, e):
+
         # Pulisce i risultati precedenti
         self._view.txt_result.controls.clear()
 
@@ -51,10 +53,17 @@ class Controller:
         # Mostra il risultato
         canzone1, canzone2, delta = result
         self._view.txt_result.controls.append(ft.Text(f"{canzone2}, {canzone1}, Δ durata: {delta} ms"))
+        self.fillDDCanzone()
         self._view.update_page()
 
-    def handle_path(self, e):
+    def fillDDCanzone(self):
+        self._view.ddcanzone.options.clear()  # Pulisce le opzioni precedenti
+        for node in self._model._grafo.nodes:
+            track_name = self._model._grafo.nodes[node]['name']
+            self._view.ddcanzone.options.append(ft.dropdown.Option(key=node, text=track_name))
+        self._view.update_page()  # Aggiorna la vista per riflettere i cambiamenti
 
+    def handle_path(self, e):
         self._view.txt_result.controls.clear()
 
         canzone_id = self._view.ddcanzone.value  # TrackId selezionato dal grafo
