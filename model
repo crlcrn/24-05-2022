@@ -1,0 +1,68 @@
+from database.DAO import DAO
+import networkx as nx
+
+
+class Model:
+    def __init__(self):
+        self._bestLen = None
+        self._grafo = nx.Graph()
+        self._nodes = []
+        self._edges = []
+
+    def buildGraph(self, g):
+        self._grafo.clear()
+        self._nodes = []
+        self._edges = []
+
+        canzoni = DAO.getAllNodes(g)
+        for c in canzoni:
+            if c not in self._grafo.nodes:
+                self._grafo.add_node(c.TrackId)
+
+        edges = DAO.getAllEdges(g)
+
+
+        for track1, track2, duration1, duration2 in edges:
+            # Calcola il peso come differenza assoluta di durata
+            peso = abs(duration1 - duration2)
+
+            # Aggiungi l'arco al grafo
+            self._grafo.add_edge(track1, track2, weight=peso)
+
+    def getDeltaMassimo(self, genre):
+        # Chiamata al DAO per ottenere il Δ massimo
+        result = DAO.getMaxDeltaEdges(genre)
+        if result:
+            # Restituisce direttamente i nomi delle canzoni e il valore massimo
+            return result[0]
+        return None
+
+    def get_componente_connessa(self, canzone, m):
+
+        if canzone not in self._grafo.nodes:
+            return [], 0
+
+        component = nx.node_connected_component(self._grafo, canzone)
+        parziale = list(component)
+
+        self._ricorsione(parziale, component, m)
+
+        return self._bestPath, len(self._bestPath)
+
+    def _ricorsione(self, parziale, component, m):
+        if len(parziale) > m:
+            return
+
+        if len(parziale) > self._bestLen:
+            self._bestLen = len(parziale)
+            self._bestPath = parziale[:]
+
+        for v in component:
+            if v not in parziale:
+                parziale.append(v)
+                self._ricorsione(parziale, component, m)
+                parziale.pop()
+
+
+    def getCaratteristiche(self):
+        return len(self._grafo.nodes), len(self._grafo.edges)
