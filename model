@@ -6,28 +6,26 @@ class Model:
     def __init__(self):
         self._bestLen = None
         self._grafo = nx.Graph()
-        self._nodes = []
-        self._edges = []
 
-    def buildGraph(self, g):
+    def get_generi(self):
+        generi = DAO.getGenre()
+        return generi
+
+    def build_graph(self, g):
         self._grafo.clear()
         self._nodes = []
         self._edges = []
 
         canzoni = DAO.getAllNodes(g)
         for c in canzoni:
-            if c not in self._grafo.nodes:
-                self._grafo.add_node(c.TrackId)
+            if c not in self._nodes:
+                self._grafo.add_node(c.TrackId, name = c.Name, bytes = c.Bytes)
 
         edges = DAO.getAllEdges(g)
 
-
         for track1, track2, duration1, duration2 in edges:
-            # Calcola il peso come differenza assoluta di durata
-            peso = abs(duration1 - duration2)
-
-            # Aggiungi l'arco al grafo
-            self._grafo.add_edge(track1, track2, weight=peso)
+            peso = abs(duration1-duration2)
+            self._grafo.add_edge(track1, track2, weight = peso)
 
     def getDeltaMassimo(self, genre):
         # Chiamata al DAO per ottenere il Δ massimo
@@ -37,8 +35,11 @@ class Model:
             return result[0]
         return None
 
-    def get_componente_connessa(self, canzone, m):
 
+    def getCaratteristiche(self):
+        return self._grafo.number_of_nodes(), self._grafo.number_of_edges()
+
+    def get_componente_connessa(self, canzone, m):
         if canzone not in self._grafo.nodes:
             return [], 0
 
@@ -49,8 +50,8 @@ class Model:
 
         return self._bestPath, len(self._bestPath)
 
-    def _ricorsione(self, parziale, component, m):
-        if len(parziale) > m:
+    def _ricorsione(self, parziale, component, m, current_bytes):
+        if current_bytes > m:
             return
 
         if len(parziale) > self._bestLen:
@@ -60,9 +61,6 @@ class Model:
         for v in component:
             if v not in parziale:
                 parziale.append(v)
-                self._ricorsione(parziale, component, m)
+                next_bytes = current_bytes + self._grafo.nodes[v]['bytes']  # Aggiunge i Bytes del nodo corrente
+                self._ricorsione(parziale, component, m, next_bytes)
                 parziale.pop()
-
-
-    def getCaratteristiche(self):
-        return len(self._grafo.nodes), len(self._grafo.edges)
