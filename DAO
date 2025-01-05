@@ -1,0 +1,93 @@
+from database.DB_connect import DBConnect
+from model.Genre import Genre
+from model.Track import Track
+
+
+class DAO():
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def getGenre():
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+        query =  "select * from genre g"
+
+        cursor.execute(query)
+
+        for row in cursor:
+            result.append(Genre(**row))
+
+        cursor.close()
+        conn.close()
+        return result
+
+    @staticmethod
+    def getAllNodes(genre):
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+        query = """ select DISTINCT *
+                    from track t 
+                    where t.GenreId = %s
+                """
+        cursor.execute(query, (genre,))
+        for row in cursor:
+            result.append(Track(**row))
+        cursor.close()
+        conn.close()
+        return result
+
+    @staticmethod
+    def getAllEdges(genre):
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+        query = """ SELECT t1.TrackId AS Track1, t2.TrackId AS Track2, 
+                    t1.Milliseconds AS Duration1, t2.Milliseconds AS Duration2
+                    FROM track t1 , track t2  
+                    WHERE t1.GenreId = %s AND t2.GenreId = %s AND t1.MediaTypeId = t2.MediaTypeId
+                    AND t1.TrackId < t2.TrackId
+                """
+        cursor.execute(query, (genre, genre))
+        for row in cursor:
+            result.append((row["Track1"], row["Track2"], row["Duration1"], row["Duration2"]))
+        cursor.close()
+        conn.close()
+        return result
+
+    @staticmethod
+    def getMaxDeltaEdges(genre):
+        conn = DBConnect.get_connection()
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT t1.TrackId AS Track1, t2.TrackId AS Track2,
+                   t1.Name AS Name1, t2.Name AS Name2,
+                   ABS(t1.Milliseconds - t2.Milliseconds) AS Delta
+            FROM track t1, track t2
+            WHERE t1.GenreId = %s AND t2.GenreId = %s
+              AND t1.MediaTypeId = t2.MediaTypeId
+              AND t1.TrackId < t2.TrackId
+            ORDER BY Delta DESC
+            
+        """
+        cursor.execute(query, (genre, genre))
+        for row in cursor:
+            result.append((row["Name1"], row["Name2"], row["Delta"]))
+
+        cursor.close()
+        conn.close()
+        return result
+
